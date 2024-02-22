@@ -2,7 +2,7 @@
 ==UserCSS==
 // @name		CohostinatorCSS
 // @match		*://cohost.org/*
-// @version		0.2
+// @version		0.3
 ==/UserCSS==
 */
 
@@ -40,14 +40,13 @@
 }
 
 #cohostinator-settings {
-	display: border-box;
+	box-sizing: border-box;
 	padding: 12px;
 	position: absolute;
 	right: 4px;
-	top: calc(4rem + 10px);
+	top: -9999px;
 	background-color: rgb(var(--color-foreground));
 	opacity: 0;
-	transition: opacity 0.5s ease, top 0.5s ease;
 }
 
 #cohostinator-settings *.quiet {
@@ -58,9 +57,19 @@
 	text-decoration: underline;
 }
 
-#cohostinator-settings[show] {
-	top: calc(4rem + 4px);
-	opacity: 1;
+#cohostinator-settings.show {
+	animation: chsettings-appear 0.5s forwards;
+}
+
+@keyframes chsettings-appear {
+	0% {
+		top: calc(4rem + 10px);
+		opacity: 0;
+	}
+	100% {
+		top: calc(4rem + 4px);
+		opacity: 1;
+	}
 }
 
 .cohostinator-setting {
@@ -75,11 +84,11 @@
 	padding-left: 0.5rem;
 	padding-right: 2rem;
 }
-/*
-.cohostinator-mainui {
+
+.cohostinator-mainui.cohostinator-wideposts {
 	display: flex;
 }
-*/
+
 #live-dashboard {
 	flex-grow: 2;
 }
@@ -110,11 +119,11 @@ main .co-post-box {
 }
 
 #cohostinator-hide-sidebar:checked ~ .cohostinator-sidebar {
-	animation: chsb-dismiss 0.5s forwards;
+	animation: chsidebar-dismiss 0.5s forwards;
 }
 
 #cohostinator-hide-sidebar:not(:checked) ~ .cohostinator-sidebar {
-	animation: chsb-recall 0.5s forwards;
+	animation: chsidebar-recall 0.5s forwards;
 }
 
 #cohostinator-hide-sidebar-arrow>svg {
@@ -125,7 +134,7 @@ main .co-post-box {
 	transform: rotate(90deg);
 }
 
-@keyframes chsb-dismiss {
+@keyframes chsidebar-dismiss {
 	0% {
 		width: auto;
 		left: 0;
@@ -142,7 +151,7 @@ main .co-post-box {
 	}
 }
 
-@keyframes chsb-recall {
+@keyframes chsidebar-recall {
 	0% {
 		width: 0;
 		opacity: 0;

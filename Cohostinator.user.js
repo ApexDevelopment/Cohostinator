@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Cohostinator
 // @match		*://cohost.org/*
-// @version		0.2
+// @version		0.3
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
@@ -41,20 +41,20 @@
 		}
 	
 		return new Promise((res) => {
+			const observer = new MutationObserver(() => {
+				let elt = selectorFunc();
+				if (elt) {
+					observer.disconnect();
+					res(elt);
+				}
+			});
+
+			observer.observe(document.body, { childList: true, subtree: true });
+			
 			let e = selectorFunc();
 			if (e) {
+				observer.disconnect();
 				res(e);
-			}
-			else {
-				const observer = new MutationObserver(() => {
-					let elt = selectorFunc();
-					if (elt) {
-						observer.disconnect();
-						res(elt);
-					}
-				});
-	
-				observer.observe(document.body, { childList: true, subtree: true });
 			}
 		});
 	};
@@ -92,20 +92,29 @@
 				friendlyName: "Top navbar",
 				default: true,
 				enable: async function() {
-					let navUI = whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:"));
+					let navUI = await whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:"));
 					navUI.classList.add("cohostinator-navui");
 					navUI.classList.remove("text-sidebarText");
 					navUI.classList.add("text-notBlack");
 				
-					let elts = document.querySelectorAll(".cohostinator-navui > a > li");
+					let elts = document.querySelectorAll(".cohostinator-navui>a>li");
 				
 					for (let elt of elts) {
 						if (elt.getAttribute("title") !== "get cohost Plus!") {
-						elt.removeChild(elt.lastChild);
+							elt.removeChild(elt.lastChild);
 						}
 					}
-				
-					header.insertBefore(navUI, settingsButton);
+
+					let insertAfter = header.firstChild;
+
+					if (insertAfter.classList.contains("lg:hidden")) {
+						insertAfter = insertAfter.nextSibling;
+					}
+
+					insertAfter.after(navUI);
+				},
+				disable: async function() {
+					alert("Top navbar is disabled, refresh the page to see the changes.");
 				}
 			},
 			widePosts: {
@@ -113,10 +122,35 @@
 				friendlyName: "Wider posts",
 				default: true,
 				enable: async function() {
-					let main = await whenElementAvailable("main");
+					console.log("Enabling wide posts");
+					let main = await whenElementAvailable(".cohostinator-mainui");
+					console.log("Found main enable");
 					let sidebar = await whenElementAvailable(".cohostinator-sidebar");
-					main.firstChild.classList.add("flex");
+					console.log("Found sidebar enable");
+					main.classList.add("cohostinator-wideposts");
 					sidebar.classList.add("cohostinator-wideposts");
+					console.log("Wideposts class added");
+
+					let hideButton = document.createElement("input");
+					hideButton.setAttribute("type", "checkbox");
+					hideButton.id = "cohostinator-hide-sidebar";
+					let label = document.createElement("label");
+					label.id = "cohostinator-hide-sidebar-arrow";
+					label.setAttribute("for", "cohostinator-hide-sidebar");
+					label.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-6 w-6 transition-transform ui-open:rotate-180"><path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 011.06-1.06L12 14.69l6.97-6.97a.75.75 0 111.06 1.06l-7.5 7.5z" clip-rule="evenodd"></path></svg>`;
+					sidebar.before(hideButton);
+					sidebar.before(label);
+				},
+				disable: async function() {
+					console.log("Disabling wide posts");
+					let main = await whenElementAvailable(".cohostinator-mainui");
+					console.log("Found main disable");
+					let sidebar = await whenElementAvailable(".cohostinator-sidebar");
+					console.log("Found sidebar disable");
+					main.firstChild.classList.remove("cohostinator-wideposts");
+					sidebar.classList.remove("cohostinator-wideposts");
+					document.getElementById("cohostinator-hide-sidebar").remove();
+					document.getElementById("cohostinator-hide-sidebar-arrow").remove();
 				}
 			},
 			forceAvis: {
@@ -125,6 +159,7 @@
 				values: ["Disable", "Circle", "Round Square", "Squircle"],
 				default: "Disable",
 				_updateAvi: async function(el, value) {
+					if (value === "Disable") return;
 					el.classList.remove("mask-circle", "mask-roundrect", "mask-squircle");
 					switch(value) {
 						case "Circle":
@@ -140,10 +175,11 @@
 					}
 				},
 				load: async function() {
-					const observer = new MutationObserver(() => {
-						let elt = document.querySelectorAll("a.mask>img.mask");
-						if (elt) {
-							this._updateAvi(elt);
+					const observer = new MutationObserver(async () => {
+						let els = document.querySelectorAll("a.mask>img.mask");
+						let value = await getValue("forceAvis", "Disable");
+						for (let el of els) {
+							this._updateAvi(el, value);
 						}
 					});
 		
@@ -152,7 +188,7 @@
 				change: async function(value) {
 					let els = document.querySelectorAll("a.mask>img.mask");
 					for (let el of els) {
-						this._updateAvi(el);
+						this._updateAvi(el, value);
 					}	
 				}
 			}
@@ -205,8 +241,12 @@
 					settingInput.checked = await getValue(settingId, settings[settingId].default);
 					settingInput.addEventListener("change", (e) => {
 						setValue(settingId, e.target.checked);
-						if (settings[settingId].enable) {
+						if (settings[settingId].enable && e.target.checked) {
 							settings[settingId].enable();
+						}
+
+						if (settings[settingId].disable && !settingInput.checked) {
+							settings[settingId].disable();
 						}
 					});
 
@@ -257,10 +297,18 @@
 		sbInnerDiv.style.transform = "rotate(-15deg)";
 		settingsButton.appendChild(sbInnerDiv);
 		settingsButton.addEventListener("click", () => {
-			settingsPage.toggleAttribute("show");
+			settingsPage.classList.toggle("show");
 		});
 	
 		header.insertBefore(settingsButton, header.lastChild);
+
+		whenElementAvailable("main").then((main) => {
+			main.firstChild.classList.add("cohostinator-mainui");
+		});
+
+		whenElementAvailable("section.border-sidebarAccent").then((cohostCorner) => {
+			cohostCorner.classList.add("cohostinator-sidebar");
+		});
 	
 		whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
 			let feedSelector = dashLink.parentNode.parentNode;
@@ -271,20 +319,6 @@
 		whenElementAvailable("#app>.fixed").then((postButton) => {
 			postButton.classList.add("text-notBlack");
 			walkDOM(postButton, removeLightText);
-		});
-	
-		whenElementAvailable("section.border-sidebarAccent").then((cohostCorner) => {
-			cohostCorner.classList.add("cohostinator-sidebar");
-		
-			let hideButton = document.createElement("input");
-			hideButton.setAttribute("type", "checkbox");
-			hideButton.id = "cohostinator-hide-sidebar";
-			let label = document.createElement("label");
-			label.id = "cohostinator-hide-sidebar-arrow";
-			label.setAttribute("for", "cohostinator-hide-sidebar");
-			label.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-6 w-6 transition-transform ui-open:rotate-180"><path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 011.06-1.06L12 14.69l6.97-6.97a.75.75 0 111.06 1.06l-7.5 7.5z" clip-rule="evenodd"></path></svg>`;
-			cohostCorner.before(hideButton);
-			cohostCorner.before(label);
 		});
 	
 		// Try to match the profile bio area
