@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Cohostinator
 // @match		*://cohost.org/*
-// @version		0.4
+// @version		0.5
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
@@ -129,6 +129,10 @@
 						main.classList.add("cohostinator-wideposts");
 					});
 
+					whenElementAvailable(".cohostinator-postcontainer").then((main) => {
+						main.classList.add("cohostinator-wideposts");
+					});
+
 					whenElementAvailable(".cohostinator-sidebar").then((sidebar) => {
 						sidebar.classList.add("cohostinator-wideposts");
 
@@ -144,13 +148,19 @@
 					});
 				},
 				disable: async function() {
-					let main = await whenElementAvailable(".cohostinator-mainui");
-					main.firstChild.classList.remove("cohostinator-wideposts");
+					whenElementAvailable(".cohostinator-mainui").then((main) => {
+						main.classList.remove("cohostinator-wideposts");
+					});
+
+					whenElementAvailable(".cohostinator-postcontainer").then((main) => {
+						main.classList.remove("cohostinator-wideposts");
+					});
 					
-					let sidebar = await whenElementAvailable(".cohostinator-sidebar");
-					sidebar.classList.remove("cohostinator-wideposts");
-					document.getElementById("cohostinator-hide-sidebar").remove();
-					document.getElementById("cohostinator-hide-sidebar-arrow").remove();
+					whenElementAvailable(".cohostinator-sidebar").then((sidebar) => {
+						sidebar.classList.remove("cohostinator-wideposts");
+						document.getElementById("cohostinator-hide-sidebar").remove();
+						document.getElementById("cohostinator-hide-sidebar-arrow").remove();
+					});
 				}
 			},
 			forceAvis: {
@@ -304,6 +314,9 @@
 
 		whenElementAvailable("main").then((main) => {
 			main.firstChild.classList.add("cohostinator-mainui");
+			whenElementAvailable(".cohostinator-mainui>section").then((postContainer) => {
+				postContainer.classList.add("cohostinator-postcontainer");
+			});
 		});
 
 		whenElementAvailable("section.border-sidebarAccent").then((cohostCorner) => {

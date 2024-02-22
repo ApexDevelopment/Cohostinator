@@ -2,7 +2,7 @@
 ==UserCSS==
 // @name		CohostinatorCSS
 // @match		*://cohost.org/*
-// @version		0.3
+// @version		0.5
 ==/UserCSS==
 */
 
@@ -87,6 +87,10 @@
 
 .cohostinator-mainui.cohostinator-wideposts {
 	display: flex;
+}
+
+.cohostinator-postcontainer.cohostinator-wideposts {
+	width: 100%;
 }
 
 #live-dashboard {
