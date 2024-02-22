@@ -1,32 +1,13 @@
 // ==UserScript==
 // @name		Cohostinator
 // @match		*://cohost.org/*
-// @version		0.1
+// @version		0.2
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // ==/UserScript==
 
-;(function() {
-	let settings = {
-		topNavbar: {
-			type: "checkbox",
-			friendlyName: "Top navbar",
-			default: true
-		},
-		widePosts: {
-			type: "checkbox",
-			friendlyName: "Wider posts",
-			default: true
-		},
-		forceAvis: {
-			type: "list",
-			friendlyName: "Force avatar shapes",
-			values: ["Disable", "Circle", "Round Square", "Squircle"],
-			default: "Disable"
-		}
-	};
-	
+;(function() {	
 	let walkDOM = function(node, func) {
 		func(node);
 		node = node.firstChild;
@@ -66,14 +47,14 @@
 			}
 			else {
 				const observer = new MutationObserver(() => {
-				let elt = selectorFunc();
-				if (elt) {
-					observer.disconnect();
-					res(elt);
-				}
-			});
+					let elt = selectorFunc();
+					if (elt) {
+						observer.disconnect();
+						res(elt);
+					}
+				});
 	
-			observer.observe(document.body, { childList: true, subtree: true });
+				observer.observe(document.body, { childList: true, subtree: true });
 			}
 		});
 	};
@@ -102,6 +83,81 @@
 	};
 	
 	let onLoad = async function() {
+		let header = (await whenElementAvailable("header")).firstChild;
+		console.log("Found header, we can proceed :3");
+
+		let settings = {
+			topNavbar: {
+				type: "checkbox",
+				friendlyName: "Top navbar",
+				default: true,
+				enable: async function() {
+					let navUI = whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:"));
+					navUI.classList.add("cohostinator-navui");
+					navUI.classList.remove("text-sidebarText");
+					navUI.classList.add("text-notBlack");
+				
+					let elts = document.querySelectorAll(".cohostinator-navui > a > li");
+				
+					for (let elt of elts) {
+						if (elt.getAttribute("title") !== "get cohost Plus!") {
+						elt.removeChild(elt.lastChild);
+						}
+					}
+				
+					header.insertBefore(navUI, settingsButton);
+				}
+			},
+			widePosts: {
+				type: "checkbox",
+				friendlyName: "Wider posts",
+				default: true,
+				enable: async function() {
+					let main = await whenElementAvailable("main");
+					let sidebar = await whenElementAvailable(".cohostinator-sidebar");
+					main.firstChild.classList.add("flex");
+					sidebar.classList.add("cohostinator-wideposts");
+				}
+			},
+			forceAvis: {
+				type: "list",
+				friendlyName: "Force avatar shapes",
+				values: ["Disable", "Circle", "Round Square", "Squircle"],
+				default: "Disable",
+				_updateAvi: async function(el, value) {
+					el.classList.remove("mask-circle", "mask-roundrect", "mask-squircle");
+					switch(value) {
+						case "Circle":
+							el.classList.add("mask-circle");
+							break;
+						case "Round Square":
+							el.classList.add("mask-roundrect");
+							break;
+						case "Squircle":
+							el.classList.add("mask-squircle");
+							break;
+						default:
+					}
+				},
+				load: async function() {
+					const observer = new MutationObserver(() => {
+						let elt = document.querySelectorAll("a.mask>img.mask");
+						if (elt) {
+							this._updateAvi(elt);
+						}
+					});
+		
+					observer.observe(document.body, { childList: true, subtree: true });
+				},
+				change: async function(value) {
+					let els = document.querySelectorAll("a.mask>img.mask");
+					for (let el of els) {
+						this._updateAvi(el);
+					}	
+				}
+			}
+		};
+
 		console.log("Doing magic!");
 	
 		/* Create the settings page */
@@ -118,6 +174,10 @@
 		settingsPage.appendChild(settingsDiv);
 	
 		for (let settingId in settings) {
+			if (settings[settingId].load) {
+				settings[settingId].load();
+			}
+
 			let settingInput;
 			let settingDiv = document.createElement("div");
 			settingDiv.classList.add("cohostinator-setting");
@@ -145,13 +205,29 @@
 					settingInput.checked = await getValue(settingId, settings[settingId].default);
 					settingInput.addEventListener("change", (e) => {
 						setValue(settingId, e.target.checked);
+						if (settings[settingId].enable) {
+							settings[settingId].enable();
+						}
 					});
+
+					if (settings[settingId].enable && settingInput.checked) {
+						settings[settingId].enable();
+					}
+
 					break;
 				case "list":
 					settingInput.value = await getValue(settingId, settings[settingId].default);
 					settingInput.addEventListener("change", (e) => {
 						setValue(settingId, e.target.value);
+						if (settings[settingId].change) {
+							settings[settingId].change(e.target.value);
+						}
 					});
+
+					if (settings[settingId].change) {
+						settings[settingId].change(settingInput.value);
+					}
+
 					break;
 				default:
 			}
@@ -159,12 +235,7 @@
 			let settingLabel = document.createElement("label");
 			settingLabel.innerText = settings[settingId].friendlyName;
 			settingLabel.setAttribute("for", inputId);
-			/*
-			settingInput.addEventListener("change", (e) => {
-				console.log("clicky");
-				setValue(settingId, )
-			});
-			*/
+			
 			settingDiv.appendChild(settingLabel);
 			settingDiv.appendChild(settingInput);
 			settingsDiv.appendChild(settingDiv);
@@ -173,9 +244,6 @@
 		let footerDiv = document.createElement("div");
 		footerDiv.innerHTML += "<span class='quiet'>by <a href='/apexpredator'>@apexpredator</a></span>";
 		settingsPage.appendChild(footerDiv);
-	
-		let header = (await whenElementAvailable("header")).firstChild;
-		console.log("Found header, we can proceed :3");
 	
 		header.classList.add("cohostinator-header");
 		header.classList.add("text-notBlack");
@@ -189,60 +257,40 @@
 		sbInnerDiv.style.transform = "rotate(-15deg)";
 		settingsButton.appendChild(sbInnerDiv);
 		settingsButton.addEventListener("click", () => {
-		settingsPage.toggleAttribute("show");
+			settingsPage.toggleAttribute("show");
 		});
 	
 		header.insertBefore(settingsButton, header.lastChild);
 	
-		whenElementAvailable("main").then((main) => {
-		main.firstChild.classList.add("cohostinator-mainui");
-		});
-	
-		whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:")).then((navUI) => {
-		navUI.classList.add("cohostinator-navui");
-		navUI.classList.remove("text-sidebarText");
-		navUI.classList.add("text-notBlack");
-	
-		let elts = document.querySelectorAll(".cohostinator-navui > a > li");
-	
-		for (let elt of elts) {
-			if (elt.getAttribute("title") !== "get cohost Plus!") {
-			elt.removeChild(elt.lastChild);
-			}
-		}
-	
-		header.insertBefore(navUI, settingsButton);
-		});
-	
 		whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
-		let feedSelector = dashLink.parentNode.parentNode;
-		feedSelector.classList.remove("text-notWhite");
-		feedSelector.classList.add("text-notBlack");
+			let feedSelector = dashLink.parentNode.parentNode;
+			feedSelector.classList.remove("text-notWhite");
+			feedSelector.classList.add("text-notBlack");
 		});
 	
 		whenElementAvailable("#app>.fixed").then((postButton) => {
-		postButton.classList.add("text-notBlack");
-		walkDOM(postButton, removeLightText);
+			postButton.classList.add("text-notBlack");
+			walkDOM(postButton, removeLightText);
 		});
 	
 		whenElementAvailable("section.border-sidebarAccent").then((cohostCorner) => {
-		cohostCorner.classList.add("cohostinator-sidebar");
-	
-		let hideButton = document.createElement("input");
-		hideButton.setAttribute("type", "checkbox");
-		hideButton.id = "cohostinator-hide-sidebar";
-		let label = document.createElement("label");
-		label.id = "cohostinator-hide-sidebar-arrow";
-		label.setAttribute("for", "cohostinator-hide-sidebar");
-		label.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-6 w-6 transition-transform ui-open:rotate-180"><path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 011.06-1.06L12 14.69l6.97-6.97a.75.75 0 111.06 1.06l-7.5 7.5z" clip-rule="evenodd"></path></svg>`;
-		cohostCorner.before(hideButton);
-		cohostCorner.before(label);
+			cohostCorner.classList.add("cohostinator-sidebar");
+		
+			let hideButton = document.createElement("input");
+			hideButton.setAttribute("type", "checkbox");
+			hideButton.id = "cohostinator-hide-sidebar";
+			let label = document.createElement("label");
+			label.id = "cohostinator-hide-sidebar-arrow";
+			label.setAttribute("for", "cohostinator-hide-sidebar");
+			label.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-6 w-6 transition-transform ui-open:rotate-180"><path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 011.06-1.06L12 14.69l6.97-6.97a.75.75 0 111.06 1.06l-7.5 7.5z" clip-rule="evenodd"></path></svg>`;
+			cohostCorner.before(hideButton);
+			cohostCorner.before(label);
 		});
 	
 		// Try to match the profile bio area
 		whenElementAvailable("div.relative.flex.break-words").then((profile) => {
-		profile.classList.add("text-notBlack");
-		walkDOM(profile, removeLightText);
+			profile.classList.add("text-notBlack");
+			walkDOM(profile, removeLightText);
 		});
 	};
 	
