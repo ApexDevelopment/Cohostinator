@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Cohostinator
 // @match		*://cohost.org/*
-// @version		0.3
+// @version		0.4
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
@@ -41,21 +41,24 @@
 		}
 	
 		return new Promise((res) => {
-			const observer = new MutationObserver(() => {
+			let interval;
+			let searchForElement = (obs) => {
 				let elt = selectorFunc();
 				if (elt) {
-					observer.disconnect();
+					obs.disconnect();
+					clearInterval(interval);
 					res(elt);
 				}
+			};
+
+			const observer = new MutationObserver(() => {
+				searchForElement(observer);
 			});
 
+			// For some reason doing both of these at the same time is the only reliable way to find elements
+			// This sucks!
 			observer.observe(document.body, { childList: true, subtree: true });
-			
-			let e = selectorFunc();
-			if (e) {
-				observer.disconnect();
-				res(e);
-			}
+			interval = setInterval(searchForElement, 50, observer);
 		});
 	};
 	
@@ -122,32 +125,29 @@
 				friendlyName: "Wider posts",
 				default: true,
 				enable: async function() {
-					console.log("Enabling wide posts");
-					let main = await whenElementAvailable(".cohostinator-mainui");
-					console.log("Found main enable");
-					let sidebar = await whenElementAvailable(".cohostinator-sidebar");
-					console.log("Found sidebar enable");
-					main.classList.add("cohostinator-wideposts");
-					sidebar.classList.add("cohostinator-wideposts");
-					console.log("Wideposts class added");
+					whenElementAvailable(".cohostinator-mainui").then((main) => {
+						main.classList.add("cohostinator-wideposts");
+					});
 
-					let hideButton = document.createElement("input");
-					hideButton.setAttribute("type", "checkbox");
-					hideButton.id = "cohostinator-hide-sidebar";
-					let label = document.createElement("label");
-					label.id = "cohostinator-hide-sidebar-arrow";
-					label.setAttribute("for", "cohostinator-hide-sidebar");
-					label.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-6 w-6 transition-transform ui-open:rotate-180"><path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 011.06-1.06L12 14.69l6.97-6.97a.75.75 0 111.06 1.06l-7.5 7.5z" clip-rule="evenodd"></path></svg>`;
-					sidebar.before(hideButton);
-					sidebar.before(label);
+					whenElementAvailable(".cohostinator-sidebar").then((sidebar) => {
+						sidebar.classList.add("cohostinator-wideposts");
+
+						let hideButton = document.createElement("input");
+						hideButton.setAttribute("type", "checkbox");
+						hideButton.id = "cohostinator-hide-sidebar";
+						let label = document.createElement("label");
+						label.id = "cohostinator-hide-sidebar-arrow";
+						label.setAttribute("for", "cohostinator-hide-sidebar");
+						label.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-6 w-6 transition-transform ui-open:rotate-180"><path fill-rule="evenodd" d="M12.53 16.28a.75.75 0 01-1.06 0l-7.5-7.5a.75.75 0 011.06-1.06L12 14.69l6.97-6.97a.75.75 0 111.06 1.06l-7.5 7.5z" clip-rule="evenodd"></path></svg>`;
+						sidebar.before(hideButton);
+						sidebar.before(label);
+					});
 				},
 				disable: async function() {
-					console.log("Disabling wide posts");
 					let main = await whenElementAvailable(".cohostinator-mainui");
-					console.log("Found main disable");
-					let sidebar = await whenElementAvailable(".cohostinator-sidebar");
-					console.log("Found sidebar disable");
 					main.firstChild.classList.remove("cohostinator-wideposts");
+					
+					let sidebar = await whenElementAvailable(".cohostinator-sidebar");
 					sidebar.classList.remove("cohostinator-wideposts");
 					document.getElementById("cohostinator-hide-sidebar").remove();
 					document.getElementById("cohostinator-hide-sidebar-arrow").remove();
