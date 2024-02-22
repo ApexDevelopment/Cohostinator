@@ -1,0 +1,157 @@
+/*
+==UserCSS==
+// @name             CohostinatorCSS
+// @match            *://cohost.org/*
+// @version          1.0
+==/UserCSS==
+*/
+
+:root {
+	--color-mango: 201 107 18 !important;
+	--color-accent: var(--color-notBlack) !important;
+	--color-foreground: 239 220 109 !important;
+	--color-background: 0 0 0 !important;
+	--color-foreground-200: 255 183 115 !important;
+	--color-foreground-600: var(--color-mango) !important;
+	--color-foreground-800: 158 50 0 !important;
+  }
+  
+  .cohostinator-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+  }
+  
+  .cohostinator-navui {
+	flex-grow: 2;
+	flex-direction: row;
+	background: none;
+	border: none;
+	box-shadow: none !important;
+  }
+  
+  .cohostinator-navui>a>li {
+	padding: 4px;
+  }
+  
+  .cohostinator-sb {
+	font-weight: bold;
+	padding: 4px;
+  }
+  
+  #cohostinator-settings {
+	display: border-box;
+	padding: 12px;
+	position: absolute;
+	right: 4px;
+	top: calc(4rem + 10px);
+	background-color: rgb(var(--color-foreground));
+	opacity: 0;
+	transition: opacity 0.5s ease, top 0.5s ease;
+  }
+  
+  #cohostinator-settings *.quiet {
+	color: rgb(89, 89, 87);
+  }
+  
+  #cohostinator-settings a:hover {
+	text-decoration: underline;
+  }
+  
+  #cohostinator-settings[show] {
+	top: calc(4rem + 4px);
+	opacity: 1;
+  }
+  
+  .cohostinator-setting {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+  }
+  
+  .cohostinator-setting select {
+	padding-top: 0.25rem;
+	padding-bottom: 0.25rem;
+	padding-left: 0.5rem;
+	padding-right: 2rem;
+  }
+  
+  .cohostinator-mainui {
+	display: flex;
+  }
+  
+  #live-dashboard {
+	flex-grow: 2;
+  }
+  
+  .cohostinator-sidebar {
+	position: relative;
+	overflow-x: hidden;
+	max-width: 25%;
+	left: 0;
+	opacity: 1;
+  }
+  
+  main .co-post-box {
+	max-width: none !important;
+  }
+  
+  #cohostinator-hide-sidebar-arrow {
+	cursor: pointer;
+  }
+  
+  #cohostinator-hide-sidebar {
+	position: absolute;
+	top: -9999px;
+	left: -9999px;
+  }
+  
+  #cohostinator-hide-sidebar:checked ~ .cohostinator-sidebar {
+	animation: chsb-dismiss 0.5s forwards;
+  }
+  
+  #cohostinator-hide-sidebar:not(:checked) ~ .cohostinator-sidebar {
+	animation: chsb-recall 0.5s forwards;
+  }
+  
+  #cohostinator-hide-sidebar-arrow>svg {
+	transform: rotate(270deg);
+  }
+  
+  #cohostinator-hide-sidebar:checked ~ #cohostinator-hide-sidebar-arrow>svg {
+	transform: rotate(90deg);
+  }
+  
+  @keyframes chsb-dismiss {
+	0% {
+	  width: auto;
+	  left: 0;
+	  opacity: 1;
+	}
+	99% {
+	  width: auto;
+	  left: 5vw;
+	  opacity: 0;
+	}
+	100% {
+	  width: 0;
+	  opacity: 0;
+	}
+  }
+  
+  @keyframes chsb-recall {
+	0% {
+	  width: 0;
+	  opacity: 0;
+	}
+	1% {
+	  width: auto;
+	  opacity: 0;
+	  left: 5vw;
+	}
+	100% {
+	  width: auto;
+	  opacity: 1;
+	  left: 0;
+	}
+  }
