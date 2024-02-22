@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name             Cohostinator
 // @match            *://cohost.org/*
-// @version          1.0
+// @version          0.1
 // @run-at           document-end
 // @grant            GM.getValue
 // @grant            GM.setValue
