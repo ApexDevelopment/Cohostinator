@@ -2,7 +2,7 @@
 ==UserCSS==
 // @name		CohostinatorCSS
 // @match		*://cohost.org/*
-// @version		0.7
+// @version		0.8
 ==/UserCSS==
 */
 
@@ -97,15 +97,18 @@
 
 .cohostinator-setting {
 	display: flex;
+	gap: 0.5rem;
 	justify-content: space-between;
 	align-items: center;
 }
 
 .cohostinator-setting select {
-	padding-top: 0.25rem;
-	padding-bottom: 0.25rem;
+	background-position: right -0.1rem center;
+	padding-top: 0.1rem;
+	padding-bottom: 0.1rem;
 	padding-left: 0.5rem;
-	padding-right: 2rem;
+	padding-right: 1.1rem;
+	line-height: 1rem;
 }
 
 .cohostinator-mainui.cohostinator-wideposts {

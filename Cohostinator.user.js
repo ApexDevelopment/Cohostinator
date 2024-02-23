@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Cohostinator
 // @match		*://cohost.org/*
-// @version		0.7
+// @version		0.8
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
@@ -161,8 +161,6 @@
 					walkDOM(header, (elt) => {
 						this._backupClasses.set(elt, elt.getAttribute("class"));
 					});
-
-					console.log("backup classes", this._backupClasses)
 					
 					walkDOM(header, removeLightText);
 					header.classList.add("text-notBlack");
@@ -220,12 +218,16 @@
 				_backupText: new Map(),
 				enable: async function() {
 					let navUI = await whenElementAvailable(".cohostinator-navui");
-					let elts = document.querySelectorAll(".cohostinator-navui>a>li");
-				
-					for (let elt of elts) {
-						if (elt.getAttribute("title") !== "get cohost Plus!") {
-							this._backupText.set(elt, elt.innerText);
-							elt.removeChild(elt.lastChild);
+
+					// For some reason the navbar on the following page does not have text
+					if (window.location.pathname !== "/rc/project/following") {
+						let elts = document.querySelectorAll(".cohostinator-navui>a>li");
+					
+						for (let elt of elts) {
+							if (elt.getAttribute("title") !== "get cohost Plus!") {
+								this._backupText.set(elt, elt.innerText);
+								elt.removeChild(elt.lastChild);
+							}
 						}
 					}
 
@@ -261,6 +263,10 @@
 				friendlyName: "Wider posts",
 				default: true,
 				enable: async function() {
+					if (window.location.pathname === "/rc/project/notifications" || window.location.pathname === "/rc/project/edit") {
+						return;
+					}
+
 					whenElementAvailable(".cohostinator-mainui").then((main) => {
 						main.classList.add("cohostinator-wideposts");
 					});
@@ -284,6 +290,10 @@
 					});
 				},
 				disable: async function() {
+					if (window.location.pathname === "/rc/project/notifications" || window.location.pathname === "/rc/project/edit") {
+						return;
+					}
+
 					whenElementAvailable(".cohostinator-mainui").then((main) => {
 						main.classList.remove("cohostinator-wideposts");
 					});
@@ -343,12 +353,9 @@
 		console.log("Doing magic!");
 	
 		/* Create the settings page */
-		let navUI = await whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:"));
-		navUI.classList.add("cohostinator-navui");
 		let settingsPage = document.createElement("div");
 		settingsPage.id = "cohostinator-settings";
 		settingsPage.classList.add("text-notBlack", "rounded-lg");
-		navUI.appendChild(settingsPage);
 	
 		let title = document.createElement("div");
 		title.innerHTML = "<strong>Cohostinator Settings</strong>";
@@ -447,6 +454,7 @@
 		});
 	
 		header.lastChild.appendChild(settingsButton);
+		header.lastChild.appendChild(settingsPage);
 
 		whenElementAvailable("main").then((main) => {
 			main.firstChild.classList.add("cohostinator-mainui");
@@ -457,6 +465,10 @@
 
 		whenElementAvailable("section.border-sidebarAccent").then((cohostCorner) => {
 			cohostCorner.classList.add("cohostinator-sidebar");
+		});
+
+		whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:")).then((navUI) => {
+			navUI.classList.add("cohostinator-navui");
 		});
 	};
 	
