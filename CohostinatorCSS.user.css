@@ -2,7 +2,7 @@
 ==UserCSS==
 // @name		CohostinatorCSS
 // @match		*://cohost.org/*
-// @version		0.6
+// @version		0.7
 ==/UserCSS==
 */
 
@@ -35,7 +35,11 @@
 	justify-content: space-between;
 }
 
-.cohostinator-navui {
+.cohostinator-navui[retheme] {
+	background-color: rgb(var(--color-foreground));
+}
+
+.cohostinator-navui[top] {
 	flex-grow: 2;
 	flex-direction: row;
 	background: none;
@@ -43,7 +47,7 @@
 	box-shadow: none !important;
 }
 
-.cohostinator-navui>a>li {
+.cohostinator-navui[top]>a>li {
 	padding: 4px;
 }
 
@@ -61,6 +65,7 @@
 	background-color: rgb(var(--color-foreground));
 	color: rgb(var(--color-notWhite));
 	opacity: 0;
+	z-index: 100;
 }
 
 #cohostinator-settings *.quiet {

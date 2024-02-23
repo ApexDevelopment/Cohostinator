@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Cohostinator
 // @match		*://cohost.org/*
-// @version		0.6
+// @version		0.7
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
@@ -105,6 +105,7 @@
 					whenElementAvailable(".cohostinator-navui").then((navUI) => {
 						navUI.classList.remove("text-sidebarText");
 						navUI.classList.add("text-notBlack");
+						navUI.setAttribute("retheme", "true");
 					});
 
 					whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
@@ -205,7 +206,7 @@
 					});
 
 					walkDOM(header, (elt) => {
-						if (this._backupClasses.has(elt)) {
+						if (this._backupClasses.has(elt) && elt !== header) {
 							elt.setAttribute("class", this._backupClasses.get(elt));
 						}
 					});
@@ -216,16 +217,19 @@
 				type: "checkbox",
 				friendlyName: "Top navbar",
 				default: true,
+				_backupText: new Map(),
 				enable: async function() {
 					let navUI = await whenElementAvailable(".cohostinator-navui");
-				
 					let elts = document.querySelectorAll(".cohostinator-navui>a>li");
 				
 					for (let elt of elts) {
 						if (elt.getAttribute("title") !== "get cohost Plus!") {
+							this._backupText.set(elt, elt.innerText);
 							elt.removeChild(elt.lastChild);
 						}
 					}
+
+					navUI.setAttribute("top", "true");
 
 					let insertAfter = header.firstChild;
 
@@ -236,7 +240,20 @@
 					insertAfter.after(navUI);
 				},
 				disable: async function() {
-					alert("Top navbar is disabled, refresh the page to see the changes.");
+					let navUI = await whenElementAvailable(".cohostinator-navui");
+					let elts = document.querySelectorAll(".cohostinator-navui>a>li");
+				
+					for (let elt of elts) {
+						if (elt.getAttribute("title") !== "get cohost Plus!") {
+							elt.appendChild(document.createTextNode(this._backupText.get(elt)));
+						}
+					}
+
+					navUI.removeAttribute("top");
+
+					whenElementAvailable(".cohostinator-mainui").then((main) => {
+						main.firstChild.before(navUI);
+					});
 				}
 			},
 			widePosts: {
@@ -429,7 +446,7 @@
 			settingsPage.classList.toggle("show");
 		});
 	
-		header.insertBefore(settingsButton, header.lastChild);
+		header.lastChild.appendChild(settingsButton);
 
 		whenElementAvailable("main").then((main) => {
 			main.firstChild.classList.add("cohostinator-mainui");
