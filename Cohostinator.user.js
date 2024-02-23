@@ -1,11 +1,205 @@
 // ==UserScript==
 // @name		Cohostinator
 // @match		*://cohost.org/*
-// @version		0.8
+// @version		0.9
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // ==/UserScript==
+
+const styles = `
+:root[retheme] {
+	--color-mango: 201 107 18 !important;
+	--color-accent: var(--color-notBlack) !important;
+	--color-foreground: 239 220 109 !important;
+	--color-background: 0 0 0 !important;
+	--color-foreground-200: 255 183 115 !important;
+	--color-foreground-600: var(--color-mango) !important;
+	--color-foreground-700: 153 51 0 !important;
+	--color-foreground-800: 158 50 0 !important;
+}
+
+.bg-cherry-500[retheme] { /* Needs dark text */
+	background-color: rgb(var(--color-foreground)) !important;
+}
+
+.bg-cherry-300[retheme] {
+	background-color: rgb(var(--color-foreground-800)) !important;
+}
+
+.text-cherry-700[retheme] {
+	color: rgb(var(--color-foreground-200)) !important;
+}
+
+.cohostinator-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+}
+
+.cohostinator-navui[retheme] {
+	background-color: rgb(var(--color-foreground));
+}
+
+.cohostinator-navui[top] {
+	flex-grow: 2;
+	flex-direction: row;
+	background: none;
+	border: none;
+	box-shadow: none !important;
+}
+
+.cohostinator-navui[top]>a>li {
+	padding: 4px;
+}
+
+.cohostinator-sb {
+	font-weight: bold;
+	padding: 4px;
+}
+
+#cohostinator-settings {
+	box-sizing: border-box;
+	padding: 12px;
+	position: absolute;
+	right: 4px;
+	top: -9999px;
+	background-color: rgb(var(--color-foreground));
+	color: rgb(var(--color-notWhite));
+	opacity: 0;
+	z-index: 100;
+}
+
+#cohostinator-settings *.quiet {
+	color: rgb(var(--color-notWhite));
+}
+
+#cohostinator-settings[retheme], #cohostinator-settings[retheme] *.quiet {
+	color: rgb(89, 89, 87);
+}
+
+#cohostinator-settings a:hover {
+	text-decoration: underline;
+}
+
+#cohostinator-settings.show {
+	animation: chsettings-appear 0.5s forwards;
+}
+
+@keyframes chsettings-appear {
+	0% {
+		top: calc(4rem + 10px);
+		opacity: 0;
+	}
+	100% {
+		top: calc(4rem + 4px);
+		opacity: 1;
+	}
+}
+
+.cohostinator-setting {
+	display: flex;
+	gap: 0.5rem;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.cohostinator-setting select {
+	background-position: right -0.1rem center;
+	padding-top: 0.1rem;
+	padding-bottom: 0.1rem;
+	padding-left: 0.5rem;
+	padding-right: 1.1rem;
+	line-height: 1rem;
+}
+
+.cohostinator-mainui.cohostinator-wideposts {
+	display: flex;
+}
+
+.cohostinator-postcontainer.cohostinator-wideposts {
+	width: 100%;
+}
+
+#live-dashboard {
+	flex-grow: 2;
+}
+
+.cohostinator-sidebar {
+	position: relative;
+	overflow-x: hidden;
+	left: 0;
+	opacity: 1;
+}
+
+.cohostinator-sidebar.cohostinator-wideposts {
+	max-width: 25%;
+}
+
+main .co-post-box {
+	max-width: none !important;
+}
+
+#cohostinator-hide-sidebar-arrow {
+	cursor: pointer;
+}
+
+#cohostinator-hide-sidebar {
+	position: absolute;
+	top: -9999px;
+	left: -9999px;
+}
+
+#cohostinator-hide-sidebar:checked ~ .cohostinator-sidebar {
+	animation: chsidebar-dismiss 0.5s forwards;
+}
+
+#cohostinator-hide-sidebar:not(:checked) ~ .cohostinator-sidebar {
+	animation: chsidebar-recall 0.5s forwards;
+}
+
+#cohostinator-hide-sidebar-arrow>svg {
+	transform: rotate(270deg);
+}
+
+#cohostinator-hide-sidebar:checked ~ #cohostinator-hide-sidebar-arrow>svg {
+	transform: rotate(90deg);
+}
+
+@keyframes chsidebar-dismiss {
+	0% {
+		width: auto;
+		left: 0;
+		opacity: 1;
+	}
+	99% {
+		width: auto;
+		left: 5vw;
+		opacity: 0;
+	}
+	100% {
+		width: 0;
+		opacity: 0;
+	}
+}
+
+@keyframes chsidebar-recall {
+	0% {
+		width: 0;
+		opacity: 0;
+	}
+	1% {
+		width: auto;
+		opacity: 0;
+		left: 5vw;
+	}
+	100% {
+		width: auto;
+		opacity: 1;
+		left: 0;
+	}
+}
+`
 
 ;(function() {	
 	let walkDOM = function(node, func) {
@@ -86,6 +280,11 @@
 	};
 	
 	let onLoad = async function() {
+		console.log("Injecting styles...");
+		let style = document.createElement("style");
+		style.innerHTML = styles;
+		document.head.appendChild(style);
+
 		let header = (await whenElementAvailable("header")).firstChild;
 		console.log("Found header, we can proceed :3");
 
