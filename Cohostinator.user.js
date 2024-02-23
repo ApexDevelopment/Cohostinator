@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name		Cohostinator
 // @match		*://cohost.org/*
-// @version		0.5
+// @version		0.6
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
@@ -10,10 +10,10 @@
 ;(function() {	
 	let walkDOM = function(node, func) {
 		func(node);
-		node = node.firstChild;
+		node = node.firstElementChild;
 		while (node) {
 			walkDOM(node, func);
-			node = node.nextSibling;
+			node = node.nextElementSibling;
 		}
 	};
 	
@@ -90,15 +90,134 @@
 		console.log("Found header, we can proceed :3");
 
 		let settings = {
+			retheme: {
+				type: "checkbox",
+				friendlyName: "Retheme",
+				default: true,
+				_backupClasses: new Map(),
+				enable: async function() {
+					document.documentElement.setAttribute("retheme", "true");
+
+					whenElementAvailable("#cohostinator-settings").then((settings) => {
+						settings.setAttribute("retheme", "true");
+					});
+
+					whenElementAvailable(".cohostinator-navui").then((navUI) => {
+						navUI.classList.remove("text-sidebarText");
+						navUI.classList.add("text-notBlack");
+					});
+
+					whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
+						let feedSelector = dashLink.parentNode.parentNode;
+						feedSelector.classList.remove("text-notWhite");
+						feedSelector.classList.add("text-notBlack");
+					});
+				
+					whenElementAvailable("#app>.fixed").then((postButton) => {
+						postButton.classList.add("text-notBlack");
+						walkDOM(postButton, (elt) => {
+							this._backupClasses.set(elt, elt.getAttribute("class"));
+						});
+						walkDOM(postButton, removeLightText);
+					});
+				
+					// Try to match the profile bio area
+					whenElementAvailable("div.relative.flex.break-words").then((profile) => {
+						profile.classList.add("text-notBlack");
+						walkDOM(profile, (elt) => {
+							this._backupClasses.set(elt, elt.getAttribute("class"));
+						});
+						walkDOM(profile, removeLightText);
+					});
+
+					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-300").length > 0).then(() => {
+						let elts = document.querySelectorAll(".bg-cherry-300");
+						for (let elt of elts) {
+							elt.setAttribute("retheme", "true");
+						}
+					});
+
+					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-500").length > 0).then(() => {
+						let elts = document.querySelectorAll(".bg-cherry-500");
+						for (let elt of elts) {
+							this._backupClasses.set(elt, elt.getAttribute("class"));
+							if (elt.classList.contains("text-notWhite") || elt.classList.contains("text-text")) {
+								elt.classList.remove("text-notWhite");
+								elt.classList.remove("text-text");
+							}
+							elt.setAttribute("retheme", "true");
+							elt.classList.add("text-notBlack");
+						}
+					});
+
+					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-700").length > 0).then(() => {
+						let elts = document.querySelectorAll(".bg-cherry-700");
+						for (let elt of elts) {
+							elt.setAttribute("retheme", "true");
+						}
+					});
+
+					walkDOM(header, (elt) => {
+						this._backupClasses.set(elt, elt.getAttribute("class"));
+					});
+
+					console.log("backup classes", this._backupClasses)
+					
+					walkDOM(header, removeLightText);
+					header.classList.add("text-notBlack");
+				},
+				disable: async function() {
+					document.querySelectorAll("*[retheme]").forEach((elt) => {
+						elt.removeAttribute("retheme");
+						if (this._backupClasses.has(elt)) {
+							elt.setAttribute("class", this._backupClasses.get(elt));
+						}
+					});
+
+					whenElementAvailable(".cohostinator-navui").then((navUI) => {
+						navUI.classList.add("text-sidebarText");
+						navUI.classList.remove("text-notBlack");
+					});
+
+					whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
+						let feedSelector = dashLink.parentNode.parentNode;
+						feedSelector.classList.add("text-notWhite");
+						feedSelector.classList.remove("text-notBlack");
+					});
+				
+					whenElementAvailable("#app>.fixed").then((postButton) => {
+						postButton.classList.remove("text-notBlack");
+						walkDOM(postButton, (elt) => {
+							if (this._backupClasses.has(elt)) {
+								elt.setAttribute("class", this._backupClasses.get(elt));
+							}
+						});
+					});
+				
+					// Try to match the profile bio area
+					whenElementAvailable("div.relative.flex.break-words").then((profile) => {
+						profile.classList.remove("text-notBlack");
+						walkDOM(profile, (elt) => {
+							if (this._backupClasses.has(elt)) {
+								elt.setAttribute("class", this._backupClasses.get(elt));
+							}
+						});
+					});
+
+					walkDOM(header, (elt) => {
+						if (this._backupClasses.has(elt)) {
+							elt.setAttribute("class", this._backupClasses.get(elt));
+						}
+					});
+					header.classList.remove("text-notBlack");
+				}
+			},
 			topNavbar: {
 				type: "checkbox",
 				friendlyName: "Top navbar",
 				default: true,
 				enable: async function() {
-					let navUI = await whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:"));
-					navUI.classList.add("cohostinator-navui");
-					navUI.classList.remove("text-sidebarText");
-					navUI.classList.add("text-notBlack");
+					let navUI = await whenElementAvailable(".cohostinator-navui");
 				
 					let elts = document.querySelectorAll(".cohostinator-navui>a>li");
 				
@@ -207,10 +326,12 @@
 		console.log("Doing magic!");
 	
 		/* Create the settings page */
+		let navUI = await whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:"));
+		navUI.classList.add("cohostinator-navui");
 		let settingsPage = document.createElement("div");
 		settingsPage.id = "cohostinator-settings";
 		settingsPage.classList.add("text-notBlack", "rounded-lg");
-		document.body.appendChild(settingsPage);
+		navUI.appendChild(settingsPage);
 	
 		let title = document.createElement("div");
 		title.innerHTML = "<strong>Cohostinator Settings</strong>";
@@ -296,8 +417,6 @@
 		settingsPage.appendChild(footerDiv);
 	
 		header.classList.add("cohostinator-header");
-		header.classList.add("text-notBlack");
-		walkDOM(header, removeLightText);
 	
 		/* Inject settings button */
 		let settingsButton = document.createElement("button");
@@ -322,24 +441,7 @@
 		whenElementAvailable("section.border-sidebarAccent").then((cohostCorner) => {
 			cohostCorner.classList.add("cohostinator-sidebar");
 		});
-	
-		whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
-			let feedSelector = dashLink.parentNode.parentNode;
-			feedSelector.classList.remove("text-notWhite");
-			feedSelector.classList.add("text-notBlack");
-		});
-	
-		whenElementAvailable("#app>.fixed").then((postButton) => {
-			postButton.classList.add("text-notBlack");
-			walkDOM(postButton, removeLightText);
-		});
-	
-		// Try to match the profile bio area
-		whenElementAvailable("div.relative.flex.break-words").then((profile) => {
-			profile.classList.add("text-notBlack");
-			walkDOM(profile, removeLightText);
-		});
 	};
 	
 	addEventListener("load", onLoad);
-	})();
+})();

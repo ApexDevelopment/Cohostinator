@@ -2,18 +2,31 @@
 ==UserCSS==
 // @name		CohostinatorCSS
 // @match		*://cohost.org/*
-// @version		0.5
+// @version		0.6
 ==/UserCSS==
 */
 
-:root {
+:root[retheme] {
 	--color-mango: 201 107 18 !important;
 	--color-accent: var(--color-notBlack) !important;
 	--color-foreground: 239 220 109 !important;
 	--color-background: 0 0 0 !important;
 	--color-foreground-200: 255 183 115 !important;
 	--color-foreground-600: var(--color-mango) !important;
+	--color-foreground-700: 153 51 0 !important;
 	--color-foreground-800: 158 50 0 !important;
+}
+
+.bg-cherry-500[retheme] { /* Needs dark text */
+	background-color: rgb(var(--color-foreground)) !important;
+}
+
+.bg-cherry-300[retheme] {
+	background-color: rgb(var(--color-foreground-800)) !important;
+}
+
+.text-cherry-700[retheme] {
+	color: rgb(var(--color-foreground-200)) !important;
 }
 
 .cohostinator-header {
@@ -46,10 +59,15 @@
 	right: 4px;
 	top: -9999px;
 	background-color: rgb(var(--color-foreground));
+	color: rgb(var(--color-notWhite));
 	opacity: 0;
 }
 
 #cohostinator-settings *.quiet {
+	color: rgb(var(--color-notWhite));
+}
+
+#cohostinator-settings[retheme], #cohostinator-settings[retheme] *.quiet {
 	color: rgb(89, 89, 87);
 }
 
