@@ -4,13 +4,13 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.1.1
+// @version		1.1.2
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // ==/UserScript==
 
-const VER = "1.1.1";
+const VER = "1.1.2";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -335,6 +335,18 @@ main .co-post-box {
 							}
 						}
 					}
+
+					whenElementAvailable(".cohostinator-navui>a[href='#']").then((bookmarks) => {
+						// Clone the node
+						let bookmarksClone = bookmarks.cloneNode(true);
+						// Add in place
+						bookmarks.after(bookmarksClone);
+						// Hide original
+						bookmarks.style.display = "none";
+						
+						bookmarksClone.setAttribute("href", "/rc/bookmarks");
+						this._backupText.set(bookmarksClone, "bookmarked tags");
+					});
 
 					navUI.setAttribute("top", "true");
 
