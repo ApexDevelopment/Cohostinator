@@ -4,18 +4,22 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.1.0
+// @version		1.1.1
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // ==/UserScript==
 
-const VER = "1.1.0";
+const VER = "1.1.1";
 const styles = `
 .cohostinator-header {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
+}
+
+.cohostinator-navui {
+	white-space: nowrap;
 }
 
 .cohostinator-navui[top] {
