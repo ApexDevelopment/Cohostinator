@@ -2,13 +2,15 @@
 // @name		Cohostinator
 // @description Tweak and theme your Cohost!
 // @namespace   https://badideas.cc/userscripts
+// @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.0
+// @version		1.1.0
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // ==/UserScript==
 
+const VER = "1.1.0";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -731,6 +733,22 @@ main .co-post-box {
 	
 		let footerDiv = document.createElement("div");
 		footerDiv.innerHTML += "<span class='quiet'>by <a href='/apexpredator'>@apexpredator</a></span>";
+		// Check for updates
+		let timeSinceLastCheck = await getValue("lastUpdateCheck", 0);
+		let now = Date.now();
+		if (now - timeSinceLastCheck > 1000 * 60 * 60 * 24) {
+			setValue("lastUpdateCheck", now);
+			fetch("https://badideas.cc/userscripts/Cohostinator.user.js")
+				.then((response) => {
+					return response.text();
+				})
+				.then((text) => {
+					let match = text.match(/@version\s+([0-9.]+)/);
+					if (match && match[1] !== VER) {
+						footerDiv.innerHTML += `<br><span class='quiet'> | <a href='https://badideas.cc/userscripts/Cohostinator.user.js'>Update available!</a></span>`;
+					}
+				});
+		}
 		settingsPage.appendChild(footerDiv);
 	
 		header.classList.add("cohostinator-header");
