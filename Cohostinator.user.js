@@ -1,51 +1,26 @@
 // ==UserScript==
 // @name		Cohostinator
+// @description Tweak and theme your Cohost!
+// @namespace   https://badideas.cc/userscripts
 // @match		*://cohost.org/*
-// @version		0.9
+// @version		1.0
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // ==/UserScript==
 
 const styles = `
-:root[retheme] {
-	--color-mango: 201 107 18 !important;
-	--color-accent: var(--color-notBlack) !important;
-	--color-foreground: 239 220 109 !important;
-	--color-background: 0 0 0 !important;
-	--color-foreground-200: 255 183 115 !important;
-	--color-foreground-600: var(--color-mango) !important;
-	--color-foreground-700: 153 51 0 !important;
-	--color-foreground-800: 158 50 0 !important;
-}
-
-.bg-cherry-500[retheme] { /* Needs dark text */
-	background-color: rgb(var(--color-foreground)) !important;
-}
-
-.bg-cherry-300[retheme] {
-	background-color: rgb(var(--color-foreground-800)) !important;
-}
-
-.text-cherry-700[retheme] {
-	color: rgb(var(--color-foreground-200)) !important;
-}
-
 .cohostinator-header {
 	display: flex;
 	flex-direction: row;
 	justify-content: space-between;
 }
 
-.cohostinator-navui[retheme] {
-	background-color: rgb(var(--color-foreground));
-}
-
 .cohostinator-navui[top] {
 	flex-grow: 2;
 	flex-direction: row;
-	background: none;
 	border: none;
+	background: none !important;
 	box-shadow: none !important;
 }
 
@@ -72,10 +47,6 @@ const styles = `
 
 #cohostinator-settings *.quiet {
 	color: rgb(var(--color-notWhite));
-}
-
-#cohostinator-settings[retheme], #cohostinator-settings[retheme] *.quiet {
-	color: rgb(89, 89, 87);
 }
 
 #cohostinator-settings a:hover {
@@ -201,7 +172,49 @@ main .co-post-box {
 }
 `
 
-;(function() {	
+;(function() {
+	let generateRethemeCSS = function(colorsObject) {
+		return `:root[retheme] {
+			--color-mango: 201 107 18 !important;
+			--color-accent: var(--color-notBlack) !important;
+			--color-foreground: 239 220 109 !important;
+			--color-background: 0 0 0 !important;
+			--color-foreground-200: 255 183 115 !important;
+			--color-foreground-600: var(--color-mango) !important;
+			--color-foreground-700: 153 51 0 !important;
+			--color-foreground-800: 158 50 0 !important;
+			--color-notBlack: 25 25 25 !important;
+			--color-notWhite: 255 249 242 !important;
+		}
+
+		.bg-notWhite[retheme] {
+			background-color: rgb(var(--color-notWhite)) !important;
+		}
+
+		.bg-cherry-700[retheme] {
+			background-color: rgb(var(--color-foreground-700)) !important;
+		}
+
+		.bg-cherry-500[retheme] { /* Needs dark text */
+			background-color: rgb(var(--color-foreground)) !important;
+		}
+
+		.bg-cherry-300[retheme] {
+			background-color: rgb(var(--color-foreground-800)) !important;
+		}
+
+		.text-cherry-700[retheme] {
+			color: rgb(var(--color-foreground-200)) !important;
+		}
+
+		.cohostinator-navui[retheme] {
+			background-color: rgb(var(--color-foreground));
+		}
+
+		#cohostinator-settings[retheme], #cohostinator-settings[retheme] *.quiet {
+			color: rgb(89, 89, 87);
+		}`;
+	}
 	let walkDOM = function(node, func) {
 		func(node);
 		node = node.firstElementChild;
@@ -278,138 +291,25 @@ main .co-post-box {
 			localStorage[key] = value;
 		}
 	};
+
+	let extractRGB = function(hexColor) {
+		return hexColor.substring(1).match(/.{2}/g).map((v) => parseInt(v, 16)).join(" ");
+	}
 	
 	let onLoad = async function() {
 		console.log("Injecting styles...");
-		let style = document.createElement("style");
-		style.innerHTML = styles;
-		document.head.appendChild(style);
+		let mainStyle = document.createElement("style");
+		mainStyle.innerHTML = styles;
+		document.head.appendChild(mainStyle);
+
+		let rethemeStyle = document.createElement("style");
+		rethemeStyle.innerHTML = generateRethemeCSS();
+		document.head.appendChild(rethemeStyle);
 
 		let header = (await whenElementAvailable("header")).firstChild;
 		console.log("Found header, we can proceed :3");
 
 		let settings = {
-			retheme: {
-				type: "checkbox",
-				friendlyName: "Retheme",
-				default: true,
-				_backupClasses: new Map(),
-				enable: async function() {
-					document.documentElement.setAttribute("retheme", "true");
-
-					whenElementAvailable("#cohostinator-settings").then((settings) => {
-						settings.setAttribute("retheme", "true");
-					});
-
-					whenElementAvailable(".cohostinator-navui").then((navUI) => {
-						navUI.classList.remove("text-sidebarText");
-						navUI.classList.add("text-notBlack");
-						navUI.setAttribute("retheme", "true");
-					});
-
-					whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
-						let feedSelector = dashLink.parentNode.parentNode;
-						feedSelector.classList.remove("text-notWhite");
-						feedSelector.classList.add("text-notBlack");
-					});
-				
-					whenElementAvailable("#app>.fixed").then((postButton) => {
-						postButton.classList.add("text-notBlack");
-						walkDOM(postButton, (elt) => {
-							this._backupClasses.set(elt, elt.getAttribute("class"));
-						});
-						walkDOM(postButton, removeLightText);
-					});
-				
-					// Try to match the profile bio area
-					whenElementAvailable("div.relative.flex.break-words").then((profile) => {
-						profile.classList.add("text-notBlack");
-						walkDOM(profile, (elt) => {
-							this._backupClasses.set(elt, elt.getAttribute("class"));
-						});
-						walkDOM(profile, removeLightText);
-					});
-
-					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-300").length > 0).then(() => {
-						let elts = document.querySelectorAll(".bg-cherry-300");
-						for (let elt of elts) {
-							elt.setAttribute("retheme", "true");
-						}
-					});
-
-					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-500").length > 0).then(() => {
-						let elts = document.querySelectorAll(".bg-cherry-500");
-						for (let elt of elts) {
-							this._backupClasses.set(elt, elt.getAttribute("class"));
-							if (elt.classList.contains("text-notWhite") || elt.classList.contains("text-text")) {
-								elt.classList.remove("text-notWhite");
-								elt.classList.remove("text-text");
-							}
-							elt.setAttribute("retheme", "true");
-							elt.classList.add("text-notBlack");
-						}
-					});
-
-					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-700").length > 0).then(() => {
-						let elts = document.querySelectorAll(".bg-cherry-700");
-						for (let elt of elts) {
-							elt.setAttribute("retheme", "true");
-						}
-					});
-
-					walkDOM(header, (elt) => {
-						this._backupClasses.set(elt, elt.getAttribute("class"));
-					});
-					
-					walkDOM(header, removeLightText);
-					header.classList.add("text-notBlack");
-				},
-				disable: async function() {
-					document.querySelectorAll("*[retheme]").forEach((elt) => {
-						elt.removeAttribute("retheme");
-						if (this._backupClasses.has(elt)) {
-							elt.setAttribute("class", this._backupClasses.get(elt));
-						}
-					});
-
-					whenElementAvailable(".cohostinator-navui").then((navUI) => {
-						navUI.classList.add("text-sidebarText");
-						navUI.classList.remove("text-notBlack");
-					});
-
-					whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
-						let feedSelector = dashLink.parentNode.parentNode;
-						feedSelector.classList.add("text-notWhite");
-						feedSelector.classList.remove("text-notBlack");
-					});
-				
-					whenElementAvailable("#app>.fixed").then((postButton) => {
-						postButton.classList.remove("text-notBlack");
-						walkDOM(postButton, (elt) => {
-							if (this._backupClasses.has(elt)) {
-								elt.setAttribute("class", this._backupClasses.get(elt));
-							}
-						});
-					});
-				
-					// Try to match the profile bio area
-					whenElementAvailable("div.relative.flex.break-words").then((profile) => {
-						profile.classList.remove("text-notBlack");
-						walkDOM(profile, (elt) => {
-							if (this._backupClasses.has(elt)) {
-								elt.setAttribute("class", this._backupClasses.get(elt));
-							}
-						});
-					});
-
-					walkDOM(header, (elt) => {
-						if (this._backupClasses.has(elt) && elt !== header) {
-							elt.setAttribute("class", this._backupClasses.get(elt));
-						}
-					});
-					header.classList.remove("text-notBlack");
-				}
-			},
 			topNavbar: {
 				type: "checkbox",
 				friendlyName: "Top navbar",
@@ -546,6 +446,199 @@ main .co-post-box {
 						this._updateAvi(el, value);
 					}	
 				}
+			},
+			retheme: {
+				type: "checkbox",
+				friendlyName: "Retheme",
+				default: true,
+				_backupClasses: new Map(),
+				enable: async function() {
+					document.documentElement.setAttribute("retheme", "true");
+
+					whenElementAvailable("#cohostinator-settings").then((settings) => {
+						settings.setAttribute("retheme", "true");
+					});
+
+					whenElementAvailable(".cohostinator-navui").then((navUI) => {
+						navUI.classList.remove("text-sidebarText");
+						navUI.classList.add("text-notBlack");
+						navUI.setAttribute("retheme", "true");
+					});
+
+					whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
+						let feedSelector = dashLink.parentNode.parentNode;
+						feedSelector.classList.remove("text-notWhite");
+						feedSelector.classList.add("text-notBlack");
+					});
+				
+					whenElementAvailable("#app>.fixed").then((postButton) => {
+						postButton.classList.add("text-notBlack");
+						walkDOM(postButton, (elt) => {
+							this._backupClasses.set(elt, elt.getAttribute("class"));
+						});
+						walkDOM(postButton, removeLightText);
+					});
+				
+					// Try to match the profile bio area
+					whenElementAvailable("div.relative.flex.break-words").then((profile) => {
+						profile.classList.add("text-notBlack");
+						walkDOM(profile, (elt) => {
+							this._backupClasses.set(elt, elt.getAttribute("class"));
+						});
+						walkDOM(profile, removeLightText);
+					});
+
+					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-300").length > 0).then(() => {
+						let elts = document.querySelectorAll(".bg-cherry-300");
+						for (let elt of elts) {
+							elt.setAttribute("retheme", "true");
+						}
+					});
+
+					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-500").length > 0).then(() => {
+						let elts = document.querySelectorAll(".bg-cherry-500");
+						for (let elt of elts) {
+							this._backupClasses.set(elt, elt.getAttribute("class"));
+							if (elt.classList.contains("text-notWhite") || elt.classList.contains("text-text")) {
+								elt.classList.remove("text-notWhite");
+								elt.classList.remove("text-text");
+							}
+							elt.setAttribute("retheme", "true");
+							elt.classList.add("text-notBlack");
+						}
+					});
+
+					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-700").length > 0).then(() => {
+						let elts = document.querySelectorAll(".bg-cherry-700");
+						for (let elt of elts) {
+							elt.setAttribute("retheme", "true");
+						}
+					});
+					/*
+					whenElementAvailable(() => document.querySelectorAll(".bg-notWhite").length > 0).then(() => {
+						let elts = document.querySelectorAll(".bg-notWhite");
+						for (let elt of elts) {
+							elt.setAttribute("retheme", "true");
+						}
+					});*/
+
+					whenElementAvailable(() => document.querySelectorAll(".text-cherry-700").length > 0).then(() => {
+						let elts = document.querySelectorAll(".text-cherry-700");
+						for (let elt of elts) {
+							elt.setAttribute("retheme", "true");
+						}
+					});
+
+					walkDOM(header, (elt) => {
+						this._backupClasses.set(elt, elt.getAttribute("class"));
+					});
+					
+					walkDOM(header, removeLightText);
+					header.classList.add("text-notBlack");
+				},
+				disable: async function() {
+					document.querySelectorAll("*[retheme]").forEach((elt) => {
+						elt.removeAttribute("retheme");
+						if (this._backupClasses.has(elt)) {
+							elt.setAttribute("class", this._backupClasses.get(elt));
+						}
+					});
+
+					whenElementAvailable(".cohostinator-navui").then((navUI) => {
+						navUI.classList.add("text-sidebarText");
+						navUI.classList.remove("text-notBlack");
+					});
+
+					whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
+						let feedSelector = dashLink.parentNode.parentNode;
+						feedSelector.classList.add("text-notWhite");
+						feedSelector.classList.remove("text-notBlack");
+					});
+				
+					whenElementAvailable("#app>.fixed").then((postButton) => {
+						postButton.classList.remove("text-notBlack");
+						walkDOM(postButton, (elt) => {
+							if (this._backupClasses.has(elt)) {
+								elt.setAttribute("class", this._backupClasses.get(elt));
+							}
+						});
+					});
+				
+					// Try to match the profile bio area
+					whenElementAvailable("div.relative.flex.break-words").then((profile) => {
+						profile.classList.remove("text-notBlack");
+						walkDOM(profile, (elt) => {
+							if (this._backupClasses.has(elt)) {
+								elt.setAttribute("class", this._backupClasses.get(elt));
+							}
+						});
+					});
+
+					walkDOM(header, (elt) => {
+						if (this._backupClasses.has(elt) && elt !== header) {
+							elt.setAttribute("class", this._backupClasses.get(elt));
+						}
+					});
+					header.classList.remove("text-notBlack");
+				}
+			},
+			colorBackground: {
+				type: "color",
+				friendlyName: "Background color",
+				default: "#000000",
+				change: async function(value) {
+					rethemeStyle.sheet.cssRules[0].style.setProperty("--color-background", extractRGB(value), "important");
+				}
+			},
+			colorForeground1: {
+				type: "color",
+				friendlyName: "Main foreground color",
+				default: "#EFDC6D",
+				change: async function(value) {
+					rethemeStyle.sheet.cssRules[0].style.setProperty("--color-foreground", extractRGB(value), "important");
+					// Dynamically generate 200, 700, 800
+					let rgb = extractRGB(value).split(" ");
+					let r = parseInt(rgb[0]);
+					let g = parseInt(rgb[1]);
+					let b = parseInt(rgb[2]);
+					// 200 is used for text, so has to be slightly lighter than main FG
+					let r200 = Math.floor(r * 1.1);
+					let g200 = Math.floor(g * 1.1);
+					let b200 = Math.floor(b * 1.1);
+					let r700 = Math.floor(r * 0.6);
+					let g700 = Math.floor(g * 0.6);
+					let b700 = Math.floor(b * 0.6);
+					let r800 = Math.floor(r * 0.7);
+					let g800 = Math.floor(g * 0.7);
+					let b800 = Math.floor(b * 0.7);
+					rethemeStyle.sheet.cssRules[0].style.setProperty("--color-foreground-200", `${r200} ${g200} ${b200}`, "important");
+					rethemeStyle.sheet.cssRules[0].style.setProperty("--color-foreground-700", `${r700} ${g700} ${b700}`, "important");
+					rethemeStyle.sheet.cssRules[0].style.setProperty("--color-foreground-800", `${r800} ${g800} ${b800}`, "important");
+				}
+			},
+			colorAccent: {
+				type: "color",
+				friendlyName: "Accent color",
+				default: "#C96B12",
+				change: async function(value) {
+					rethemeStyle.sheet.cssRules[0].style.setProperty("--color-mango", extractRGB(value), "important");
+				}
+			},
+			colorNotBlack: {
+				type: "color",
+				friendlyName: "Dark text+panel color",
+				default: "#191919",
+				change: async function(value) {
+					rethemeStyle.sheet.cssRules[0].style.setProperty("--color-notBlack", extractRGB(value), "important");
+				}
+			},
+			colorNotWhite: {
+				type: "color",
+				friendlyName: "Light text+border color",
+				default: "#FFF9F2",
+				change: async function(value) {
+					rethemeStyle.sheet.cssRules[0].style.setProperty("--color-notWhite", extractRGB(value), "important");
+				}
 			}
 		};
 
@@ -610,6 +703,7 @@ main .co-post-box {
 
 					break;
 				case "list":
+				case "color":
 					settingInput.value = await getValue(settingId, settings[settingId].default);
 					settingInput.addEventListener("change", (e) => {
 						setValue(settingId, e.target.value);
