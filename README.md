@@ -1,5 +1,5 @@
 # Cohostinator!
 
-A userscript+style for supercharging your Cohost experience. Developed with Firemonkey but should be compatible with most monkeys.
+A userscript for supercharging your Cohost experience. Developed with Firemonkey but should be compatible with most monkeys.
 
-# Under development! Do not use yet!
+Cohostinator is still under development! Please file a detailed bug report if you encounter any issues.
