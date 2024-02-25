@@ -4,13 +4,13 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.1.2
+// @version		1.1.3
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // ==/UserScript==
 
-const VER = "1.1.2";
+const VER = "1.1.3";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -344,8 +344,9 @@ main .co-post-box {
 						// Hide original
 						bookmarks.style.display = "none";
 						
+						bookmarksClone.classList.add("cohostinator-bookmarksFix");
 						bookmarksClone.setAttribute("href", "/rc/bookmarks");
-						this._backupText.set(bookmarksClone, "bookmarked tags");
+						this._backupText.set(bookmarksClone.firstChild, "bookmarked tags");
 					});
 
 					navUI.setAttribute("top", "true");
@@ -372,6 +373,14 @@ main .co-post-box {
 
 					whenElementAvailable(".cohostinator-mainui").then((main) => {
 						main.firstChild.before(navUI);
+					});
+
+					whenElementAvailable(".cohostinator-navui>a[href='#']").then((bookmarks) => {
+						bookmarks.style.display = "block";
+					});
+
+					whenElementAvailable(".cohostinator-bookmarksFix").then((bookmarksClone) => {
+						bookmarksClone.remove();
 					});
 				}
 			},
