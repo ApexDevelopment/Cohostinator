@@ -4,13 +4,13 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.1.3
+// @version		1.2.0
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // ==/UserScript==
 
-const VER = "1.1.3";
+const VER = "1.2.0";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -37,6 +37,11 @@ const styles = `
 .cohostinator-sb {
 	font-weight: bold;
 	padding: 4px;
+}
+
+.cohostinator-long-post {
+	max-height: 80vh;
+	overflow: hidden;
 }
 
 #cohostinator-settings {
@@ -382,6 +387,60 @@ main .co-post-box {
 					whenElementAvailable(".cohostinator-bookmarksFix").then((bookmarksClone) => {
 						bookmarksClone.remove();
 					});
+				}
+			},
+			clipLongPosts: {
+				type: "checkbox",
+				friendlyName: "Clip long posts",
+				default: true,
+				_clipPost: async function(el, value) {
+					let height = el.offsetHeight;
+					if (value && height > window.innerHeight && !el.classList.contains("cohostinator-long-post-expanded")) {
+						el.classList.add("cohostinator-long-post");
+						// Add a label to expand the post
+						let label = document.createElement("div");
+						label.classList.add("cohostinator-long-post-label");
+						label.innerText = `Long post clipped! Click to expand. Original size: ${Math.floor(height / window.innerHeight)}x screen height.`;
+						// Lol
+						el.parentNode.lastChild.firstChild.firstChild.after(label);
+
+						label.addEventListener("click", () => {
+							el.classList.add("cohostinator-long-post-expanded");
+							el.classList.remove("cohostinator-long-post");
+							label.remove();
+						});
+					}
+					else if (!value && el.classList.contains("cohostinator-long-post")) {
+						el.classList.remove("cohostinator-long-post");
+					}
+				},
+				load: async function() {
+					const observer = new MutationObserver(async () => {
+						let els = document.querySelectorAll("article.co-post-box>div");
+						let value = await getValue("clipLongPosts", true);
+						for (let el of els) {
+							this._clipPost(el, value);
+						}
+					});
+		
+					observer.observe(document.body, { childList: true, subtree: true });
+				},
+				enable: async function() {
+					let els = document.querySelectorAll("article.co-post-box>div");
+					for (let el of els) {
+						this._clipPost(el, true);
+					}
+				},
+				disable: async function() {
+					let els = document.querySelectorAll("article.co-post-box>div");
+					for (let el of els) {
+						this._clipPost(el, false);
+					}
+
+					let labels = document.querySelectorAll(".cohostinator-long-post-label");
+					for (let label of labels) {
+						label.remove();
+					}
 				}
 			},
 			widePosts: {
