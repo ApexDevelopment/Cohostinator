@@ -4,13 +4,14 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.3.0
+// @version		1.3.1
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
+// @grant 		GM.xmlHttpRequest
 // ==/UserScript==
 
-const VER = "1.3.0";
+const VER = "1.3.1";
 const styles = `
 .cohostinator-header {
 	display: flex;
