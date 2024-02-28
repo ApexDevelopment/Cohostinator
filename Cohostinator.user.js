@@ -4,14 +4,14 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.3.2
+// @version		1.3.3
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // @grant 		GM.xmlHttpRequest
 // ==/UserScript==
 
-const VER = "1.3.2";
+const VER = "1.3.3";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -336,6 +336,11 @@ main .co-post-box {
 				enable: async function() {
 					let navUI = await whenElementAvailable(".cohostinator-navui");
 
+					// Takes up one column of space if wide posts are disabled (mainui is not flexed)
+					let fillerDiv = document.createElement("div");
+					fillerDiv.id = "cohostinator-filler";
+					navUI.after(fillerDiv);
+
 					// For some reason the navbar on the following page does not have text
 					if (window.location.pathname !== "/rc/project/following") {
 						let elts = document.querySelectorAll(".cohostinator-navui>a>li");
@@ -382,6 +387,11 @@ main .co-post-box {
 					}
 
 					navUI.removeAttribute("top");
+
+					let fillerDiv = document.getElementById("cohostinator-filler");
+					if (fillerDiv) {
+						fillerDiv.remove();
+					}
 
 					whenElementAvailable(".cohostinator-mainui").then((main) => {
 						main.firstChild.before(navUI);
