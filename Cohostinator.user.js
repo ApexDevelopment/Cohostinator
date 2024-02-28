@@ -4,14 +4,14 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.3.1
+// @version		1.3.2
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // @grant 		GM.xmlHttpRequest
 // ==/UserScript==
 
-const VER = "1.3.1";
+const VER = "1.3.2";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -96,14 +96,6 @@ const styles = `
 	line-height: 1rem;
 }
 
-.cohostinator-mainui.cohostinator-wideposts {
-	display: flex;
-}
-
-.cohostinator-postcontainer.cohostinator-wideposts {
-	width: 100%;
-}
-
 #live-dashboard {
 	flex-grow: 2;
 }
@@ -113,10 +105,6 @@ const styles = `
 	overflow-x: hidden;
 	left: 0;
 	opacity: 1;
-}
-
-.cohostinator-sidebar.cohostinator-wideposts {
-	max-width: 25%;
 }
 
 main .co-post-box {
@@ -185,6 +173,24 @@ main .co-post-box {
 `
 
 ;(function() {
+	let generateWidePostsCSS = function() {
+		return `
+		.prose {
+			max-width: none !important;
+		}
+		.cohostinator-mainui {
+			display: flex;
+		}
+		
+		.cohostinator-postcontainer {
+			width: 100%;
+		}
+		
+		.cohostinator-sidebar {
+			max-width: 25%;
+		}`;
+	}
+
 	let generateRethemeCSS = function(colorsObject) {
 		return `:root[retheme] {
 			--color-mango: 201 107 18 !important;
@@ -396,12 +402,12 @@ main .co-post-box {
 				default: true,
 				_clipPost: async function(el, value) {
 					let height = el.offsetHeight;
-					if (value && height > window.innerHeight && !el.classList.contains("cohostinator-long-post-expanded")) {
+					if (value && height > window.innerHeight * 1.5 && !el.classList.contains("cohostinator-long-post-expanded")) {
 						el.classList.add("cohostinator-long-post");
 						// Add a label to expand the post
 						let label = document.createElement("div");
 						label.classList.add("cohostinator-long-post-label");
-						label.innerText = `Long post clipped! Click to expand. Original size: ${Math.floor(height / window.innerHeight)}x screen height.`;
+						label.innerText = `Long post clipped! Click to expand. Original size: ${Math.round(height / window.innerHeight)}x screen height.`;
 						// Lol
 						el.parentNode.lastChild.firstChild.firstChild.after(label);
 
@@ -452,18 +458,14 @@ main .co-post-box {
 					if (window.location.pathname === "/rc/project/notifications" || window.location.pathname === "/rc/project/edit") {
 						return;
 					}
-
-					whenElementAvailable(".cohostinator-mainui").then((main) => {
-						main.classList.add("cohostinator-wideposts");
-					});
-
-					whenElementAvailable(".cohostinator-postcontainer").then((main) => {
-						main.classList.add("cohostinator-wideposts");
-					});
+					
+					const widePostsCSS = generateWidePostsCSS();
+					let widePostsStyle = document.createElement("style");
+					widePostsStyle.innerHTML = widePostsCSS;
+					widePostsStyle.id = "cohostinator-wideposts";
+					document.head.appendChild(widePostsStyle);
 
 					whenElementAvailable(".cohostinator-sidebar").then((sidebar) => {
-						sidebar.classList.add("cohostinator-wideposts");
-
 						let hideButton = document.createElement("input");
 						hideButton.setAttribute("type", "checkbox");
 						hideButton.id = "cohostinator-hide-sidebar";
@@ -480,16 +482,11 @@ main .co-post-box {
 						return;
 					}
 
-					whenElementAvailable(".cohostinator-mainui").then((main) => {
-						main.classList.remove("cohostinator-wideposts");
-					});
-
-					whenElementAvailable(".cohostinator-postcontainer").then((main) => {
-						main.classList.remove("cohostinator-wideposts");
+					whenElementAvailable("#cohostinator-wideposts").then((style) => {
+						style.remove();
 					});
 					
 					whenElementAvailable(".cohostinator-sidebar").then((sidebar) => {
-						sidebar.classList.remove("cohostinator-wideposts");
 						document.getElementById("cohostinator-hide-sidebar").remove();
 						document.getElementById("cohostinator-hide-sidebar-arrow").remove();
 					});
