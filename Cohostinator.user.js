@@ -4,14 +4,14 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.3.5
+// @version		1.3.6
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // @grant 		GM.xmlHttpRequest
 // ==/UserScript==
 
-const VER = "1.3.5";
+const VER = "1.3.6";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -131,6 +131,10 @@ main .co-post-box {
 
 #cohostinator-hide-sidebar:checked ~ #cohostinator-hide-sidebar-arrow>svg {
 	transform: rotate(90deg);
+}
+
+.co-thread-footer>div {
+	gap: 1rem;
 }
 
 @keyframes chsidebar-dismiss {
@@ -439,7 +443,7 @@ main .co-post-box {
 				default: true,
 				_clipPost: async function(el, value) {
 					let height = el.offsetHeight;
-					if (value && height > window.innerHeight * 1.5 && !el.classList.contains("cohostinator-long-post-expanded")) {
+					if (value && height > window.innerHeight * 1.5 && !el.classList.contains("cohostinator-long-post-expanded") && !el.classList.contains("cohostinator-long-post")) {
 						el.classList.add("cohostinator-long-post");
 						// Add a label to expand the post
 						let label = document.createElement("div");
