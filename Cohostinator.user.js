@@ -4,14 +4,14 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.3.4
+// @version		1.3.5
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // @grant 		GM.xmlHttpRequest
 // ==/UserScript==
 
-const VER = "1.3.4";
+const VER = "1.3.5";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -627,7 +627,6 @@ main .co-post-box {
 						let elts = document.querySelectorAll(".co-project-display-name");
 						for (let elt of elts) {
 							this._backupClasses.set(elt, elt.getAttribute("class"));
-							elt.classList.add("text-onBackground-dynamic");
 						}
 					});
 */
@@ -647,6 +646,9 @@ main .co-post-box {
 					walkDOM(header, (elt) => {
 						this._backupClasses.set(elt, elt.getAttribute("class"));
 						removeLightText(elt);
+						if (elt.classList.contains("text-notBlack")) {
+							elt.classList.remove("text-notBlack");
+						}
 					});
 					
 					this._backupClasses.set(header, header.getAttribute("class"));
