@@ -188,6 +188,92 @@ main .co-post-box {
 		max-width: 25%;
 	}`;
 
+	let watcher = {
+		interval: null,
+		selectorsAndCallbacks: new Map(),
+		whenElementsAvailable: function(selector) {
+			return new Promise((res) => {
+				if (typeof selector === "string") {
+					let selectorStr = selector;
+					selector = function() {
+						return document.querySelectorAll(selectorStr);
+					}
+				}
+
+				let result = selector();
+
+				if (result.length > 0) {
+					console.log("Fastpath for selector", selector, "with result", result);
+					res(result);
+				}
+				else {
+					console.log("Callback added for", selector);
+					this.selectorsAndCallbacks.set(selector, res);
+
+					if (this.interval === null) {
+						this.startInterval();
+					}
+				}
+			});
+		},
+		whenElementAvailableId: function(id) {
+			return new Promise((res) => {
+				let selector = function() {
+					return document.getElementById(id);
+				}
+				
+				let result = selector();
+
+				if (result) {
+					console.log("Fastpath for id", id, "with result", result);
+
+					res(result);
+				}
+				else {
+					console.log("Callback added for", selector);
+					this.selectorsAndCallbacks.set(selector, res);
+
+					if (this.interval === null) {
+						this.startInterval();
+					}
+				}
+			});
+		},
+		startInterval: function() {
+			this.interval = setInterval(() => {
+				for (let [selector, callback] of this.selectorsAndCallbacks) {
+					let result = selector();
+					if (result && (result.length === undefined || result.length > 0)) {
+						console.log("Selector", selector, "has result", result);
+						callback(result);
+						this.selectorsAndCallbacks.delete(selector);
+					}
+				}
+
+				if (this.selectorsAndCallbacks.size === 0) {
+					clearInterval(this.interval);
+				}
+			}, 50);
+		},
+		addObserver: function() {
+			const observer = new MutationObserver(() => {
+				for (let [selector, callback] of this.selectorsAndCallbacks) {
+					let result = selector();
+					if (result && (result.length === undefined || result.length > 0)) {
+						console.log("Selector", selector, "has result", result);
+						callback(result);
+						this.selectorsAndCallbacks.delete(selector);
+					}
+				}
+			});
+
+			observer.observe(document.body, { childList: true, subtree: true });
+			this.startInterval();
+		}
+	}
+
+	watcher.addObserver();
+
 	let rethemer = {
 		colors: {
 			mango: "201 107 18",
@@ -282,42 +368,6 @@ main .co-post-box {
 		}
 	};
 	
-	// Hacky way to wait for elements to load or short circuit if they exist already
-	// A function can be provided because for some reason querySelector and getElementById validate input differently??
-	let whenElementAvailable = function(selectorOrFunction) {
-		let selectorFunc;
-	
-		if (typeof selectorOrFunction === "string") {
-			selectorFunc = () => {
-				return document.querySelector(selectorOrFunction);
-			};
-		}
-		else {
-			selectorFunc = selectorOrFunction;
-		}
-	
-		return new Promise((res) => {
-			let interval;
-			let searchForElement = (obs) => {
-				let elt = selectorFunc();
-				if (elt) {
-					obs.disconnect();
-					clearInterval(interval);
-					res(elt);
-				}
-			};
-
-			const observer = new MutationObserver(() => {
-				searchForElement(observer);
-			});
-
-			// For some reason doing both of these at the same time is the only reliable way to find elements
-			// This sucks!
-			observer.observe(document.body, { childList: true, subtree: true });
-			interval = setInterval(searchForElement, 50, observer);
-		});
-	};
-	
 	let getValue = async function(key, defaultValue) {
 		key = "chin8r-" + key;
 		if (GM && GM.getValue) {
@@ -354,7 +404,7 @@ main .co-post-box {
 		let rethemeStyle = document.createElement("style");
 		rethemeStyle.id = "cohostinator-retheme";
 
-		let header = (await whenElementAvailable("header")).firstChild;
+		let header = (await watcher.whenElementsAvailable("header"))[0].firstChild;
 		header.classList.add("cohostinator-header");
 		console.log("Found header, we can proceed :3");
 
@@ -365,7 +415,7 @@ main .co-post-box {
 				default: true,
 				_backupText: new Map(),
 				enable: async function() {
-					let navUI = await whenElementAvailable(".cohostinator-navui");
+					let navUI = (await watcher.whenElementsAvailable(".cohostinator-navui"))[0];
 
 					// Takes up one column of space if wide posts are disabled (mainui is not flexed)
 					let fillerDiv = document.createElement("div");
@@ -384,7 +434,8 @@ main .co-post-box {
 						}
 					}
 
-					whenElementAvailable(".cohostinator-navui>a[href='#']").then((bookmarks) => {
+					watcher.whenElementsAvailable(".cohostinator-navui>a[href='#']").then((bookmarks) => {
+						bookmarks = bookmarks[0];
 						// Clone the node
 						let bookmarksClone = bookmarks.cloneNode(true);
 						// Add in place
@@ -408,7 +459,7 @@ main .co-post-box {
 					insertAfter.after(navUI);
 				},
 				disable: async function() {
-					let navUI = await whenElementAvailable(".cohostinator-navui");
+					let navUI = (await watcher.whenElementsAvailable(".cohostinator-navui"))[0];
 					let elts = document.querySelectorAll(".cohostinator-navui>a>li");
 				
 					for (let elt of elts) {
@@ -424,16 +475,16 @@ main .co-post-box {
 						fillerDiv.remove();
 					}
 
-					whenElementAvailable(".cohostinator-mainui").then((main) => {
-						main.firstChild.before(navUI);
+					watcher.whenElementsAvailable(".cohostinator-mainui").then((main) => {
+						main[0].firstChild.before(navUI);
 					});
 
-					whenElementAvailable(".cohostinator-navui>a[href='#']").then((bookmarks) => {
-						bookmarks.style.display = "block";
+					watcher.whenElementsAvailable(".cohostinator-navui>a[href='#']").then((bookmarks) => {
+						bookmarks[0].style.display = "block";
 					});
 
-					whenElementAvailable(".cohostinator-bookmarksFix").then((bookmarksClone) => {
-						bookmarksClone.remove();
+					watcher.whenElementsAvailable(".cohostinator-bookmarksFix").then((bookmarksClone) => {
+						bookmarksClone[0].remove();
 					});
 				}
 			},
@@ -505,7 +556,8 @@ main .co-post-box {
 					widePostsStyle.id = "cohostinator-wideposts";
 					document.head.appendChild(widePostsStyle);
 
-					whenElementAvailable(".cohostinator-sidebar").then((sidebar) => {
+					watcher.whenElementsAvailable(".cohostinator-sidebar").then((sidebar) => {
+						sidebar = sidebar[0];
 						let hideButton = document.createElement("input");
 						hideButton.setAttribute("type", "checkbox");
 						hideButton.id = "cohostinator-hide-sidebar";
@@ -522,11 +574,11 @@ main .co-post-box {
 						return;
 					}
 
-					whenElementAvailable("#cohostinator-wideposts").then((style) => {
+					watcher.whenElementAvailableId("cohostinator-wideposts").then((style) => {
 						style.remove();
 					});
 					
-					whenElementAvailable(".cohostinator-sidebar").then((sidebar) => {
+					watcher.whenElementsAvailable(".cohostinator-sidebar").then((sidebar) => {
 						document.getElementById("cohostinator-hide-sidebar").remove();
 						document.getElementById("cohostinator-hide-sidebar-arrow").remove();
 					});
@@ -579,20 +631,22 @@ main .co-post-box {
 				enable: async function() {
 					document.head.appendChild(rethemeStyle);
 
-					whenElementAvailable(".cohostinator-navui").then((navUI) => {
+					watcher.whenElementsAvailable(".cohostinator-navui").then((navUI) => {
+						navUI = navUI[0];
 						this._backupClasses.set(navUI, navUI.getAttribute("class"));
 						navUI.classList.remove("text-sidebarText");
 						navUI.classList.add("text-onForeground-dynamic");
 					});
 
-					whenElementAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
-						let feedSelector = dashLink.parentNode.parentNode;
+					watcher.whenElementsAvailable("a[href='https://cohost.org/rc/dashboard']").then((dashLink) => {
+						let feedSelector = dashLink[0].parentNode.parentNode;
 						this._backupClasses.set(feedSelector, feedSelector.getAttribute("class"));
 						feedSelector.classList.remove("text-notWhite");
 						feedSelector.classList.add("text-onForeground-dynamic");
 					});
 				
-					whenElementAvailable("#app>.fixed").then((postButton) => {
+					watcher.whenElementsAvailable("#app>.fixed").then((postButton) => {
+						postButton = postButton[0];
 						this._backupClasses.set(postButton, postButton.getAttribute("class"));
 						postButton.classList.add("text-onForeground-dynamic");
 						walkDOM(postButton, (elt) => {
@@ -602,7 +656,8 @@ main .co-post-box {
 					});
 				
 					// Try to match the profile bio area
-					whenElementAvailable("div.relative.flex.break-words").then((profile) => {
+					watcher.whenElementsAvailable("div.relative.flex.break-words").then((profile) => {
+						profile = profile[0];
 						profile.classList.add("text-onForeground-dynamic");
 						walkDOM(profile, (elt) => {
 							this._backupClasses.set(elt, elt.getAttribute("class"));
@@ -610,16 +665,14 @@ main .co-post-box {
 						});
 					});
 
-					whenElementAvailable(() => document.querySelectorAll(".co-prose").length > 0).then(() => {
-						let elts = document.querySelectorAll(".co-prose");
+					watcher.whenElementsAvailable(".co-prose").then((elts) => {
 						for (let elt of elts) {
 							this._backupClasses.set(elt, elt.getAttribute("class"));
 							elt.classList.add("text-onBackground-dynamic");
 						}
 					});
 
-					whenElementAvailable(() => document.querySelectorAll(".co-project-display-name").length > 0).then(() => {
-						let elts = document.querySelectorAll(".co-project-display-name");
+					watcher.whenElementsAvailable(".co-project-display-name").then((elts) => {
 						for (let elt of elts) {
 							this._backupClasses.set(elt, elt.getAttribute("class"));
 							elt.classList.add("text-onBackground-dynamic");
@@ -634,8 +687,7 @@ main .co-post-box {
 						}
 					});
 */
-					whenElementAvailable(() => document.querySelectorAll(".bg-cherry-500").length > 0).then(() => {
-						let elts = document.querySelectorAll(".bg-cherry-500");
+					watcher.whenElementsAvailable(".bg-cherry-500").then((elts) => {
 						for (let elt of elts) {
 							this._backupClasses.set(elt, elt.getAttribute("class"));
 							if (elt.classList.contains("text-notWhite") || elt.classList.contains("text-text")) {
@@ -900,8 +952,9 @@ main .co-post-box {
 			}`;
 			document.head.appendChild(apexStyle);
 
-			whenElementAvailable("div>div>div:has(>img[alt='apexpredator'])").then((img) => {
-				console.log(img)
+			watcher.whenElementsAvailable("div>div>div:has(>img[alt='apexpredator'])").then((img) => {
+				img = img[0];
+
 				img.addEventListener("mouseenter", () => {
 					img.style.zIndex = "100";
 					fsDiv.setAttribute("activate", "true");
@@ -916,18 +969,18 @@ main .co-post-box {
 			});
 		}
 
-		whenElementAvailable("main").then((main) => {
-			main.firstChild.classList.add("cohostinator-mainui");
-			whenElementAvailable(".cohostinator-mainui>section").then((postContainer) => {
-				postContainer.classList.add("cohostinator-postcontainer");
+		watcher.whenElementsAvailable("main").then((main) => {
+			main[0].firstChild.classList.add("cohostinator-mainui");
+			watcher.whenElementsAvailable(".cohostinator-mainui>section").then((postContainer) => {
+				postContainer[0].classList.add("cohostinator-postcontainer");
 			});
 		});
 
-		whenElementAvailable("section.border-sidebarAccent").then((cohostCorner) => {
-			cohostCorner.classList.add("cohostinator-sidebar");
+		watcher.whenElementsAvailable("section.border-sidebarAccent").then((cohostCorner) => {
+			cohostCorner[0].classList.add("cohostinator-sidebar");
 		});
 
-		whenElementAvailable(() => document.getElementById("headlessui-menu-items-:r0:")).then((navUI) => {
+		watcher.whenElementAvailableId("headlessui-menu-items-:r0:").then((navUI) => {
 			navUI.classList.add("cohostinator-navui");
 		});
 	};
