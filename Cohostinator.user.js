@@ -203,11 +203,9 @@ main .co-post-box {
 				let result = selector();
 
 				if (result.length > 0) {
-					console.log("Fastpath for selector", selector, "with result", result);
 					res(result);
 				}
 				else {
-					console.log("Callback added for", selector);
 					this.selectorsAndCallbacks.set(selector, res);
 
 					if (this.interval === null) {
@@ -225,12 +223,10 @@ main .co-post-box {
 				let result = selector();
 
 				if (result) {
-					console.log("Fastpath for id", id, "with result", result);
 
 					res(result);
 				}
 				else {
-					console.log("Callback added for", selector);
 					this.selectorsAndCallbacks.set(selector, res);
 
 					if (this.interval === null) {
@@ -244,7 +240,6 @@ main .co-post-box {
 				for (let [selector, callback] of this.selectorsAndCallbacks) {
 					let result = selector();
 					if (result && (result.length === undefined || result.length > 0)) {
-						console.log("Selector", selector, "has result", result);
 						callback(result);
 						this.selectorsAndCallbacks.delete(selector);
 					}
@@ -260,7 +255,6 @@ main .co-post-box {
 				for (let [selector, callback] of this.selectorsAndCallbacks) {
 					let result = selector();
 					if (result && (result.length === undefined || result.length > 0)) {
-						console.log("Selector", selector, "has result", result);
 						callback(result);
 						this.selectorsAndCallbacks.delete(selector);
 					}
@@ -715,7 +709,6 @@ main .co-post-box {
 					
 					for (let [elt, classes] of this._backupClasses) {
 						elt.setAttribute("class", classes);
-						console.log(elt, classes);
 					}
 				}
 			},
