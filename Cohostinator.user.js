@@ -4,7 +4,7 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.3.7
+// @version		1.3.8
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
