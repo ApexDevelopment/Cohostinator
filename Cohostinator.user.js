@@ -4,14 +4,13 @@
 // @namespace   https://badideas.cc/userscripts
 // @downloadURL	https://badideas.cc/userscripts/Cohostinator.user.js
 // @match		*://cohost.org/*
-// @version		1.3.6
+// @version		1.3.7
 // @run-at		document-end
 // @grant		GM.getValue
 // @grant		GM.setValue
 // @grant 		GM.xmlHttpRequest
 // ==/UserScript==
 
-const VER = "1.3.6";
 const styles = `
 .cohostinator-header {
 	display: flex;
@@ -887,7 +886,7 @@ main .co-post-box {
 				url: "https://badideas.cc/userscripts/Cohostinator.user.js",
 				onload: (response) => {
 					let match = response.responseText.match(/@version\s+([0-9.]+)/);
-					if (match && match[1] !== VER) {
+					if (match && match[1] !== GM.info.script.version) {
 						footerDiv.innerHTML += `<span class='quiet'> | <a href='https://badideas.cc/userscripts/Cohostinator.user.js'>Update available!</a></span>`;
 					}
 				}
