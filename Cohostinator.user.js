@@ -423,7 +423,12 @@ main .co-post-box {
 						for (let elt of elts) {
 							if (elt.getAttribute("title") !== "get cohost Plus!") {
 								this._backupText.set(elt, elt.innerText);
-								elt.removeChild(elt.lastChild);
+								// Remove children that are text nodes
+								for (let child of elt.childNodes) {
+									if (child.nodeType === Node.TEXT_NODE) {
+										elt.removeChild(child);
+									}
+								}
 							}
 						}
 					}
