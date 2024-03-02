@@ -247,6 +247,7 @@ main .co-post-box {
 
 				if (this.selectorsAndCallbacks.size === 0) {
 					clearInterval(this.interval);
+					this.interval = null;
 				}
 			}, 50);
 		},
